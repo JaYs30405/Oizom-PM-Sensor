@@ -48,7 +48,7 @@ DMA_HandleTypeDef hdma_usart1_tx;
 
 /* USER CODE BEGIN PV */
 uint16_t adc_buffer[ADC_BUF_SIZE];
-uint8_t uart_tx_buf[ADC_BUF_SIZE];   // byte buffer for UART DMA
+uint8_t uart_tx_buf[3*(ADC_BUF_SIZE/2)];   // byte buffer for UART DMA
 volatile uint8_t uart_tx_busy = 0;   // guard flag — don't send if previous not done
 
 float baseline = 0.0f;
@@ -236,6 +236,9 @@ static void MX_ADC1_Init(void)
   }
   /* USER CODE BEGIN ADC1_Init 2 */
 
+	//adc sample time calculation :
+	// 12000000 clk freq / (12.5 sar tconv + sampling time)
+	
   /* USER CODE END ADC1_Init 2 */
 
 }
@@ -342,10 +345,11 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
 				/* Pack uint16 as two bytes each — MSB first */
 				for(int i = 0; i < ADC_BUF_SIZE/2; i++)
 				{
-						uart_tx_buf[i*2]   = (adc_buffer[i] >> 8) & 0xFF;
-						uart_tx_buf[i*2+1] =  adc_buffer[i] & 0xFF;
+							uart_tx_buf[i*3]   = 0xFF;
+							uart_tx_buf[i*3+1] = (adc_buffer[i] >> 8) & 0x0F;
+							uart_tx_buf[i*3+2] =  adc_buffer[i] & 0xFF;
 				}
-				HAL_UART_Transmit_DMA(&huart1, uart_tx_buf, ADC_BUF_SIZE);
+				HAL_UART_Transmit_DMA(&huart1, uart_tx_buf, 3*(ADC_BUF_SIZE/2));
 		}
 }
 
@@ -361,10 +365,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
             uart_tx_busy = 1;
             for(int i = 0; i < ADC_BUF_SIZE/2; i++)
             {
-                uart_tx_buf[i*2]   = (adc_buffer[ADC_BUF_SIZE/2 + i] >> 8) & 0xFF;
-                uart_tx_buf[i*2+1] =  adc_buffer[ADC_BUF_SIZE/2 + i] & 0xFF;
+                uart_tx_buf[i*3]   = 0xFF;
+                uart_tx_buf[i*3+1] = (adc_buffer[ADC_BUF_SIZE/2 + i] >> 8) & 0x0F;
+                uart_tx_buf[i*3+2] =  adc_buffer[ADC_BUF_SIZE/2 + i] & 0xFF;
             }
-            HAL_UART_Transmit_DMA(&huart1, uart_tx_buf, ADC_BUF_SIZE);
+            HAL_UART_Transmit_DMA(&huart1, uart_tx_buf, 3*(ADC_BUF_SIZE/2));
         }
 				
 			  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, ADC_BUF_SIZE);
@@ -475,7 +480,7 @@ float particle_concentration(float diameter, uint32_t N)
 
     float conc = (PI/6.0f) * RHO * diameter * diameter * diameter * volume_ratio;
 
-    return conc * 1e9f;   // �g/m�
+    return conc * 1e9f;   // g/m
 }
 
 /* ------------------- debug ------------------- */
