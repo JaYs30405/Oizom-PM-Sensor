@@ -402,7 +402,7 @@ void process_samples(uint16_t *data, uint16_t len)
 					int delta = sample - prev_sample;
         /* -------- Rising detection -------- */
 
-        if(delta >= 1)
+        if(delta >= 0)
         {
             rising++;
 
