@@ -28,6 +28,10 @@ line,      = ax.plot([], [], color='#39d353', linewidth=0.8)
 base_line, = ax.plot([], [], color='#f0a500', linewidth=0.8, linestyle='--', label='baseline est.')
 ax.legend(facecolor='#161b22', labelcolor='#e6edf3', loc='upper right')
 
+value_text = ax.text(0.02, 0.92, '', transform=ax.transAxes,
+                     color='#ffffff', fontsize=12,
+                     bbox=dict(facecolor='#161b22', edgecolor='#30363d', boxstyle='round,pad=0.4'))
+
 running_baseline = 0.0
 
 def read_samples():
@@ -63,10 +67,12 @@ def update(frame):
     samples = read_samples()
     if samples:
         buf.extend(samples)
+        current_val = samples[-1]
+        value_text.set_text(f'ADC: {current_val}  |  Baseline: {running_baseline:.1f}  |  Above Baseline: {current_val - running_baseline:.1f}')
     y = list(buf)
     line.set_data(range(WINDOW), y)
     base_line.set_data(range(WINDOW), [running_baseline] * WINDOW)
-    return line, base_line,
+    return line, base_line, value_text,
 
 ani = animation.FuncAnimation(fig, update, interval=30, blit=False)
 plt.tight_layout()
