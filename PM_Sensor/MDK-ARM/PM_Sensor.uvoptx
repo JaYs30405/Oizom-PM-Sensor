@@ -130,7 +130,7 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>DLGTARM</Key>
-          <Name>(1010=782,215,1232,772,0)(1007=-1,-1,-1,-1,0)(1008=-1,-1,-1,-1,0)(1009=-1,-1,-1,-1,0)</Name>
+          <Name>(1010=782,215,1232,772,0)(1007=-1,-1,-1,-1,0)(1008=90,121,466,357,0)(1009=-1,-1,-1,-1,0)</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -233,30 +233,15 @@
         <Ww>
           <count>15</count>
           <WinNumber>1</WinNumber>
-          <ItemText>pm03</ItemText>
+          <ItemText>hist,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>16</count>
           <WinNumber>1</WinNumber>
-          <ItemText>pm05</ItemText>
+          <ItemText>current_peak,0x0A</ItemText>
         </Ww>
         <Ww>
           <count>17</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>pm10</ItemText>
-        </Ww>
-        <Ww>
-          <count>18</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>hist,0x0A</ItemText>
-        </Ww>
-        <Ww>
-          <count>19</count>
-          <WinNumber>1</WinNumber>
-          <ItemText>current_peak</ItemText>
-        </Ww>
-        <Ww>
-          <count>20</count>
           <WinNumber>1</WinNumber>
           <ItemText>final_peak,0x0A</ItemText>
         </Ww>

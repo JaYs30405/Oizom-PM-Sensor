@@ -191,19 +191,15 @@ void SysTick_Handler(void)
   /* USER CODE BEGIN SysTick_IRQn 1 */
 	ms_counter++;
 
-  if(ms_counter >= 1000)
+  if(ms_counter >= 10000)
   {
       ms_counter = 0;
-			particles_03 = bin_03;
-			particles_05 = bin_05;
-			particles_10 = bin_10;
-			particles_25 = bin_25;
-			particles_50 = bin_50;
-			particles_100 = bin_100;
-
-//			pm03 = particle_concentration(0.3e-6f, particles_03);
-//			pm05 = particle_concentration(0.5e-6f, particles_05);
-//			pm10 = particle_concentration(1e-6f, particles_10);
+			particles_03 = bin_03*109+bin_05*109+bin_10*109+bin_25*109+bin_50*109+bin_100*109;
+			particles_05 = bin_05*109+bin_10*109+bin_25*109+bin_50*109+bin_100*109;
+			particles_10 = bin_10*109+bin_25*109+bin_50*109+bin_100*109;
+			particles_25 = bin_25*109+bin_50*109+bin_100*109;
+			particles_50 = bin_50*109+bin_100*109;
+			particles_100 = bin_100*109;
 
 			bin_03 = 0;
 			bin_05 = 0;

@@ -51,9 +51,8 @@ uint16_t adc_buffer[ADC_BUF_SIZE];
 uint8_t uart_tx_buf[3*(ADC_BUF_SIZE/2)];   // byte buffer for UART DMA
 volatile uint8_t uart_tx_busy = 0;   // guard flag — don't send if previous not done
 
-float baseline = 0.0f;
-float current_peak = 0.0f;
-float peak_log[MAX_LOG];
+int baseline = 0;
+int current_peak = 0.0f;
 uint16_t peak_index = 0;
 
 volatile uint32_t bin_03 = 0;
@@ -70,16 +69,14 @@ volatile uint32_t particles_25  = 0;
 volatile uint32_t particles_50  = 0;
 volatile uint32_t particles_100 = 0;
 
-volatile float pm03 = 0;
-volatile float pm05 = 0;
-volatile float pm10 = 0;
-
 volatile int final_peak=0;
 volatile int hist[101];
 
 volatile uint32_t ms_counter = 0;
-volatile uint8_t one_second_flag = 0;
-	
+
+volatile bool ADC_ConvHalfCplt = 0;
+volatile bool ADC_ConvCplt = 0;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -144,6 +141,16 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		if(ADC_ConvHalfCplt)
+		{
+			ADC_ConvHalfCplt = 0;
+			process_samples(&adc_buffer[0], ADC_BUF_SIZE/2);			
+		}
+		else if(ADC_ConvCplt)
+		{
+			ADC_ConvCplt = 0;
+			process_samples(&adc_buffer[ADC_BUF_SIZE/2], ADC_BUF_SIZE/2);
+		}
   }
   /* USER CODE END 3 */
 }
@@ -229,7 +236,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_4;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_7CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -335,42 +342,44 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef* hadc)
 {
     if(hadc->Instance == ADC1)
     {
-        process_samples(&adc_buffer[0], ADC_BUF_SIZE/2);
+			ADC_ConvHalfCplt = 1;
+      //process_samples(&adc_buffer[0], ADC_BUF_SIZE/2);
     }
 		
-		/* Send first half of adc_buffer over UART DMA */
-		if(!uart_tx_busy)
-		{
-				uart_tx_busy = 1;
-				/* Pack uint16 as two bytes each — MSB first */
-				for(int i = 0; i < ADC_BUF_SIZE/2; i++)
-				{
-							uart_tx_buf[i*3]   = 0xFF;
-							uart_tx_buf[i*3+1] = (adc_buffer[i] >> 8) & 0x0F;
-							uart_tx_buf[i*3+2] =  adc_buffer[i] & 0xFF;
-				}
-				HAL_UART_Transmit_DMA(&huart1, uart_tx_buf, 3*(ADC_BUF_SIZE/2));
-		}
+//		/* Send first half of adc_buffer over UART DMA */
+//		if(!uart_tx_busy)
+//		{
+//				uart_tx_busy = 1;
+//				/* Pack uint16 as two bytes each — MSB first */
+//				for(int i = 0; i < ADC_BUF_SIZE/2; i++)
+//				{
+//							uart_tx_buf[i*3]   = 0xFF;
+//							uart_tx_buf[i*3+1] = (adc_buffer[i] >> 8) & 0x0F;
+//							uart_tx_buf[i*3+2] =  adc_buffer[i] & 0xFF;
+//				}
+//				HAL_UART_Transmit_DMA(&huart1, uart_tx_buf, 3*(ADC_BUF_SIZE/2));
+//		}
 }
 
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
     if(hadc->Instance == ADC1)
     {
-        process_samples(&adc_buffer[ADC_BUF_SIZE/2], ADC_BUF_SIZE/2);
+			ADC_ConvCplt = 1;
+        //process_samples(&adc_buffer[ADC_BUF_SIZE/2], ADC_BUF_SIZE/2);
 			
-			  /* Send second half of adc_buffer over UART DMA */
-        if(!uart_tx_busy)
-        {
-            uart_tx_busy = 1;
-            for(int i = 0; i < ADC_BUF_SIZE/2; i++)
-            {
-                uart_tx_buf[i*3]   = 0xFF;
-                uart_tx_buf[i*3+1] = (adc_buffer[ADC_BUF_SIZE/2 + i] >> 8) & 0x0F;
-                uart_tx_buf[i*3+2] =  adc_buffer[ADC_BUF_SIZE/2 + i] & 0xFF;
-            }
-            HAL_UART_Transmit_DMA(&huart1, uart_tx_buf, 3*(ADC_BUF_SIZE/2));
-        }
+//			  /* Send second half of adc_buffer over UART DMA */
+//        if(!uart_tx_busy)
+//        {
+//            uart_tx_busy = 1;
+//            for(int i = 0; i < ADC_BUF_SIZE/2; i++)
+//            {
+//                uart_tx_buf[i*3]   = 0xFF;
+//                uart_tx_buf[i*3+1] = (adc_buffer[ADC_BUF_SIZE/2 + i] >> 8) & 0x0F;
+//                uart_tx_buf[i*3+2] =  adc_buffer[ADC_BUF_SIZE/2 + i] & 0xFF;
+//            }
+//            HAL_UART_Transmit_DMA(&huart1, uart_tx_buf, 3*(ADC_BUF_SIZE/2));
+//        }
 				
 			  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adc_buffer, ADC_BUF_SIZE);
 
@@ -396,13 +405,11 @@ void process_samples(uint16_t *data, uint16_t len)
 
         /* -------- Baseline tracking -------- */
 
-//        baseline = baseline + BASELINE_ALPHA * (sample - baseline);
-//				sample = sample - baseline;
-//        int delta = sample - prev_sample;
-				if(abs(sample - (int)baseline) < THRESHOLD_LOW)
-				{
-						baseline = baseline + BASELINE_ALPHA * (sample - baseline);
-				}
+//				if(abs(sample - (int)baseline) < THRESHOLD_LOW)
+//				{
+//						baseline = 15;//baseline + BASELINE_ALPHA * (sample - baseline);
+//				}
+					baseline = 15;
 					sample = sample - baseline;
 					int delta = sample - prev_sample;
         /* -------- Rising detection -------- */
@@ -420,12 +427,13 @@ void process_samples(uint16_t *data, uint16_t len)
 
             if(rising > 6)
             {
-                uint16_t peak = current_peak;
-								final_peak = peak;
-								classify_particle(peak);
-								if(peak > 4000)
-									peak = 4000;
-								hist[peak/40]++;
+								final_peak  = current_peak;
+								classify_particle(final_peak);
+								
+								if(final_peak > 4000)
+									final_peak = 4000;
+								
+								hist[final_peak/40]++;
             }
 
             rising = 0;
@@ -436,38 +444,26 @@ void process_samples(uint16_t *data, uint16_t len)
     }
 }
 
-/* ------------------- Peak Logging ------------------- */
-
-void log_peak(float peak)
-{
-    peak_log[peak_index] = peak;
-    peak_index++;
-
-    if(peak_index >= MAX_LOG)
-        peak_index = 0;
-}
-
-
 /* ------------------- Classify Peaks ------------------- */
 
 void classify_particle(uint16_t peak)
 {
-    if(peak > 2000)
+    if(peak > 550)
         bin_100++;
 
-    else if(peak > 1200)
+    else if(peak > 450)
         bin_50++;
 
-    else if(peak > 700)
+    else if(peak > 400)
         bin_25++;
 
     else if(peak > 350)
         bin_10++;
 
-    else if(peak > 220)
+    else if(peak > 150)
         bin_05++;
 
-    else if(peak > 150)
+    else if(peak > 81)
         bin_03++;
 }
 

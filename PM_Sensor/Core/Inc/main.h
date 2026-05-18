@@ -33,6 +33,7 @@ extern "C" {
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
 #include "stdlib.h"
+#include "stdbool.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -43,9 +44,7 @@ extern volatile uint32_t particles_10 ;
 extern volatile uint32_t particles_25 ;
 extern volatile uint32_t particles_50 ;
 extern volatile uint32_t particles_100;
-extern volatile float pm03;
-extern volatile float pm05;
-extern volatile float pm10;
+
 extern volatile uint32_t bin_03;
 extern volatile uint32_t bin_05;
 extern volatile uint32_t bin_10;
@@ -66,8 +65,8 @@ extern volatile int hist[101];
 /* USER CODE BEGIN EM */
 #define ADC_BUF_SIZE      256
 #define BASELINE_ALPHA    0.001f
-#define THRESHOLD_HIGH    50.0f
-#define THRESHOLD_LOW     30.0f
+#define THRESHOLD_HIGH    50
+#define THRESHOLD_LOW     20
 #define MAX_LOG           100
 #define PI 3.1415926f
 #define RHO 1650.0f
